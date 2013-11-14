@@ -1,3 +1,4 @@
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -42,15 +43,18 @@ public class CommunicationHandler implements Runnable {
 				} catch (IOException e) {
 					//Connection dun goofed
 				}
-				File f = new File("/tmp/" + filename);
+				System.out.println("TEST1");
+				File f = new File(filename);
 				FileOutputStream ps = new FileOutputStream(f);
+				System.out.println("TEST2");
 				ps.write(data);
 				ps.close();
+				System.out.println("TEST3");
 				
 				
 			}
 		}
-		if(request.equals("ACK\n") == false) {
+		if(request.equals("ACK") == false) {
 			ack(con);
 		} else {
 			con.acked = true;
