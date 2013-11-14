@@ -41,14 +41,13 @@ public class FileSystem implements Runnable{
 	}
 	
 	private void sendFileIncMessage(DistFile f, int c) throws IOException, InterruptedException {
-		System.out.println("Sending FILE INC message");
 		byte[] messageStr = ("FILESYSTEM FILE_INC " + f.filename + "," + f.getSize() + "\n").getBytes();
 		int size = messageStr.length;
 		byte[] message = new byte[size + f.getSize()];
+		System.out.println("Sending FILE INC message" + f.getSize());
 		ByteBuffer target = ByteBuffer.wrap(message);
 		target.put(messageStr);
 		target.put(f.getBytes());
-		
 		
 		
 		cServer.sendMessage(c,message);

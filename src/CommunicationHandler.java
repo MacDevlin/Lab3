@@ -35,7 +35,7 @@ public class CommunicationHandler implements Runnable {
 				String[] split = request.split(" ");
 				String filename = split[2].split(",")[0];
 				int filesize = Integer.parseInt(split[2].split(",")[1]);
-				System.out.println(String.format("Creating local copy of %s", filename));
+				System.out.println(String.format("Creating local copy of %s [%d]", filename, filesize));
 				byte[] data = new byte[filesize];
 				try {
 					con.networkIn.readFully(data);
