@@ -124,6 +124,9 @@ public class FileSystem implements Runnable{
 			} catch (IOException e) {
 				System.out.println("Could not split up files");
 				System.exit(1);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 			
 		}
