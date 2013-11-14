@@ -52,6 +52,7 @@ public class ComputeNode {
 		}
 		try {
 			master = new Connection(node_config.get("master_ip"), Integer.parseInt(node_config.get("master_port")));
+			cServer.addConnection(master);
 		} catch (NumberFormatException e) {
 			System.out.println("Bad port in config file");
 			System.exit(1);

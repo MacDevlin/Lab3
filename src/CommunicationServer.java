@@ -30,12 +30,13 @@ public class CommunicationServer implements Runnable {
 	}
 	
 	//message assumed to end in newline
-	public synchronized void sendMessage(int c, byte[] message) throws IOException, InterruptedException {
+	public void sendMessage(int c, byte[] message) throws IOException, InterruptedException {
 		Connection con = connections.get(c);
 		con.networkOut.write(message);
 		
 		//wait for ACK
 		while(true) {
+			System.out.println("ack loop");
 			if(con.acked == true) {
 				con.acked=false;
 				break;
@@ -55,6 +56,10 @@ public class CommunicationServer implements Runnable {
 			}
 		}
 		return -1;
+	}
+	
+	public void addConnection(Connection c) {
+		connections.add(c);
 	}
 	
 	public void run() {

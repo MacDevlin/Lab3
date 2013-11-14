@@ -77,6 +77,12 @@ public class CommunicationHandler implements Runnable {
 					//couldn't save file or other things
 				}
 			}
+			try {
+				Thread.currentThread().sleep(10);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
 }
