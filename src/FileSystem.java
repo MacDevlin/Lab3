@@ -45,11 +45,17 @@ public class FileSystem implements Runnable{
 		int size = messageStr.length;
 		byte[] message = new byte[size + f.getSize()];
 		System.out.println("Sending FILE INC message" + f.getSize());
-		ByteBuffer target = ByteBuffer.wrap(message);
-		target.put(messageStr);
-		target.put(f.getBytes());
+		//ByteBuffer target = ByteBuffer.wrap(message);
+		//target.put(messageStr);
+		//target.put(f.getBytes());
+		System.arraycopy(messageStr, 0, message, 0, messageStr.length);
+		byte[] fileData = f.getBytes();
+		System.arraycopy(fileData, 0, message, messageStr.length, fileData.length);
+		System.out.println("Message length: " + message.length);
+		System.out.println("MessageStr length: " + messageStr.length);
 		
-		
+		System.out.println("fileData length: " + fileData.length);
+		System.out.println("filesize: " + f.getSize());
 		cServer.sendMessage(c,message);
 		System.out.println("TEST");
 		

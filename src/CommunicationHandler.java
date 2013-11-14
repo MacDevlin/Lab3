@@ -50,7 +50,7 @@ public class CommunicationHandler implements Runnable {
 				
 			}
 		}
-		if(request.equals("ACK") == false) {
+		if(request.equals("ACK\n") == false) {
 			ack(con);
 		} else {
 			con.acked = true;
