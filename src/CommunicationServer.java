@@ -36,7 +36,6 @@ public class CommunicationServer implements Runnable {
 		
 		//wait for ACK
 		while(true) {
-			System.out.println("ack loop");
 			if(con.acked == true) {
 				con.acked=false;
 				break;

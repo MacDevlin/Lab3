@@ -40,12 +40,38 @@ public class MasterNode {
 		}
 	}
 	
+	public static void processConsole(String request) {
+		if(request.startsWith("files")) {
+			fSystem.printLocations();
+		}
+	}
+	
+	public static void startShell() {
+		String request = "";
+		
+		while(true) {
+			try {
+				if(System.in.available()>0) {
+					char readByte = (char)System.in.read();
+					if(readByte != '\n') {
+						request = request + readByte;
+					}
+					else {
+						//end of request
+						processConsole(request);
+						request = "";
+					}
+				}
+			} catch (IOException e) {
+				
+			}
+		}
+	}
+	
 	
 	public static void main(String[] args) throws NumberFormatException, UnknownHostException {
 		System.out.println("Reading configuration data");
 		loadMasterNodeConfig();
-		System.out.println("Loading Scheduler");
-		scheduler = new Scheduler();
 		System.out.println("Setting up network");
 		try {
 			cServer = new CommunicationServer(Integer.parseInt(master_config.get("port")));
@@ -62,5 +88,11 @@ public class MasterNode {
 		fSystem = new FileSystem(InetAddress.getLocalHost().getHostAddress(), Integer.parseInt(master_config.get("port")), cServer, true);
 		fSystemThread = new Thread(fSystem);
 		fSystemThread.start();
+
+		System.out.println("Loading Scheduler");
+		scheduler = new Scheduler(fSystem);
+		
+		startShell();
+		
 	}
 }

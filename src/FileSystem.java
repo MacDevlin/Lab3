@@ -3,12 +3,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 public class FileSystem implements Runnable{
@@ -20,6 +20,8 @@ public class FileSystem implements Runnable{
 	boolean isMaster;
 	CommunicationServer cServer;
 	public Map<String,String> filesystem_config;
+	Map<String,Integer> fileLocations;
+	
 	public FileSystem(String ip, int port, CommunicationServer cServer, boolean isMaster) {
 		files = new ArrayList<File>();
 		this.ip = ip;
@@ -27,17 +29,17 @@ public class FileSystem implements Runnable{
 		this.cServer=cServer;
 		this.isMaster = isMaster;
 		filesystem_config = new HashMap<String,String>();
+		fileLocations = new HashMap<String,Integer>();
 	}
 	
-	public File createFile(String filename) {
-		int id = files.size();
-		File f = null;
-		files.add(f);
-		return f;
+	
+	
+	public void addRecord(String filename, int c) {
+		fileLocations.put(filename, c);
 	}
 	
-	public DistFile makeLocal(File f) {
-		return null;
+	public int getFileLocation(String filename) {
+		return fileLocations.get(filename);
 	}
 	
 	private void sendFileIncMessage(DistFile f, int c) throws IOException, InterruptedException {
@@ -45,19 +47,11 @@ public class FileSystem implements Runnable{
 		int size = messageStr.length;
 		byte[] message = new byte[size + f.getSize()];
 		System.out.println("Sending FILE INC message" + f.getSize());
-		//ByteBuffer target = ByteBuffer.wrap(message);
-		//target.put(messageStr);
-		//target.put(f.getBytes());
 		System.arraycopy(messageStr, 0, message, 0, messageStr.length);
 		byte[] fileData = f.getBytes();
 		System.arraycopy(fileData, 0, message, messageStr.length, fileData.length);
-		System.out.println("Message length: " + message.length);
-		System.out.println("MessageStr length: " + messageStr.length);
-		
-		System.out.println("fileData length: " + fileData.length);
-		System.out.println("filesize: " + f.getSize());
 		cServer.sendMessage(c,message);
-		System.out.println("TEST");
+		addRecord(f.filename, c);
 		
 	}
 	
@@ -77,6 +71,7 @@ public class FileSystem implements Runnable{
 			{
 				DistFile f = new DistFile(file,r,lines,numLines/rep*r,numLines/rep);
 				sendFileIncMessage(f,node%cServer.participants());
+				
 				node++;
 			}
 			DistFile f = new DistFile(file,rep-1,lines,numLines/rep*(rep-1),numLines/rep+numLines%rep);
@@ -107,6 +102,14 @@ public class FileSystem implements Runnable{
 		} catch (IOException e) {
 			System.out.println("Could not read filesystem_config.conf, exiting");
 			System.exit(1);
+		}
+	}
+	
+	public void printLocations() {
+		Iterator<String> locs = fileLocations.keySet().iterator();
+		while(locs.hasNext()) {
+			String loc = locs.next();
+			System.out.println(String.format("File %s: %s", loc, (cServer.connections.get(fileLocations.get(loc))).asString()));
 		}
 	}
 	

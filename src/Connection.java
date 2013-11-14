@@ -33,4 +33,9 @@ public class Connection {
 	public String getLine() throws IOException {
 		return networkIn.readLine();
 	}
+	
+	public String asString() {
+		return remoteIp + ":" + remotePort;
+	}
+	
 }

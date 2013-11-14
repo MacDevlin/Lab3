@@ -41,15 +41,11 @@ public class CommunicationHandler implements Runnable {
 				try {
 					con.networkIn.readFully(data);
 				} catch (IOException e) {
-					//Connection dun goofed
 				}
-				System.out.println("TEST1");
 				File f = new File(filename);
 				FileOutputStream ps = new FileOutputStream(f);
-				System.out.println("TEST2");
 				ps.write(data);
 				ps.close();
-				System.out.println("TEST3");
 				
 				
 			}
