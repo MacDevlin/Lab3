@@ -1,8 +1,6 @@
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 
 
 public class CommunicationHandler implements Runnable {
@@ -14,8 +12,12 @@ public class CommunicationHandler implements Runnable {
 		running=false;
 	}
 	
-	public void ack(int c) {
-		cServer.connections.get(c).networkOut.print("ACK\n");
+	public void sendMessage(Connection c, byte[] message) throws IOException {
+		c.networkOut.write(message);
+	}
+	
+	public void ack(Connection c) {
+		c.networkOut.print("ACK\n");
 	}
 	
 	public void processRequest(String request, Connection con) throws IOException {
@@ -28,10 +30,12 @@ public class CommunicationHandler implements Runnable {
 		}
 		else if(request.startsWith("FILESYSTEM")) {
 			if(request.startsWith("FILESYSTEM FILE_INC")) {
+				
 				//format: FILESYSTEM FILE_INC [filename],[size as int]\n{data}
 				String[] split = request.split(" ");
 				String filename = split[2].split(",")[0];
 				int filesize = Integer.parseInt(split[2].split(",")[1]);
+				System.out.println(String.format("Creating local copy of %s", filename));
 				byte[] data = new byte[filesize];
 				try {
 					con.networkIn.readFully(data);
@@ -45,6 +49,11 @@ public class CommunicationHandler implements Runnable {
 				
 				
 			}
+		}
+		if(request.equals("ACK") == false) {
+			ack(con);
+		} else {
+			con.acked = true;
 		}
 	}
 	

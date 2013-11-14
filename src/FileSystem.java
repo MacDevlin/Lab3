@@ -3,6 +3,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -39,7 +40,23 @@ public class FileSystem implements Runnable{
 		return null;
 	}
 	
+	private void sendFileIncMessage(DistFile f, int c) throws IOException, InterruptedException {
+		byte[] messageStr = ("FILESYSTEM FILE_INC " + f.filename + "," + f.getSize() + "\n").getBytes();
+		int size = messageStr.length;
+		byte[] message = new byte[size + f.getSize()];
+		ByteBuffer target = ByteBuffer.wrap(message);
+		target.put(messageStr);
+		target.put(f.getBytes());
+		
+		
+		
+		cServer.sendMessage(c,message);
+		
+		
+	}
+	
 	private void splitUpFiles(int rep, String[] filesStr) throws IOException {
+		int node = 0;
 		for(int i=0; i < filesStr.length; i++) {
 			String file = filesStr[i];
 			FileInputStream fi = new FileInputStream(file);
@@ -53,8 +70,12 @@ public class FileSystem implements Runnable{
 			for(int r=0; r<rep-1; r++)
 			{
 				DistFile f = new DistFile(file,r,lines,numLines/rep*r,numLines/rep);
+				sendFileIncMessage(f,node%cServer.participants());
+				node++;
 			}
 			DistFile f = new DistFile(file,rep-1,lines,numLines/rep*(rep-1),numLines/rep+numLines%rep);
+			sendFileIncMessage(f,node%cServer.participants());
+			node++;
 		}
 	}
 	

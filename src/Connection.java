@@ -11,12 +11,14 @@ public class Connection {
 	public Socket sock;
 	public String remoteIp;
 	public int remotePort;
+	public boolean acked;
 	
 	public Connection(Socket sock) throws IOException {
 		networkIn = new DataInputStream(sock.getInputStream());
 		networkOut = new PrintStream(sock.getOutputStream());
 		remotePort = sock.getPort();
 		remoteIp = sock.getInetAddress().getHostAddress();
+		acked=false;
 	}
 	
 	public Connection(String ip, int port) throws UnknownHostException, IOException {
@@ -25,6 +27,7 @@ public class Connection {
 		networkOut = new PrintStream(sock.getOutputStream());
 		remotePort = sock.getPort();
 		remoteIp = sock.getInetAddress().getHostAddress();
+		acked=false;
 	}
 	
 	public String getLine() throws IOException {

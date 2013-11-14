@@ -13,13 +13,35 @@ public class CommunicationServer implements Runnable {
 	public InetAddress host;
 	public ServerSocket serverSocket;
 	List<Connection> connections;
-	
+	CommunicationHandler cHandler;
 	public CommunicationServer(int port) throws IOException {
 		connections = new LinkedList<Connection>();
 
 		host = InetAddress.getLocalHost();
 		serverSocket = new ServerSocket(port);
 		this.port = serverSocket.getLocalPort();
+		cHandler = new CommunicationHandler(this);
+		Thread cHandlerThread = new Thread(cHandler);
+		cHandlerThread.start();
+	}
+	
+	public int participants() {
+		return connections.size();
+	}
+	
+	//message assumed to end in newline
+	public synchronized void sendMessage(int c, byte[] message) throws IOException, InterruptedException {
+		Connection con = connections.get(c);
+		con.networkOut.write(message);
+		
+		//wait for ACK
+		while(true) {
+			if(con.acked == true) {
+				con.acked=false;
+				break;
+			}
+			Thread.sleep(25);
+		}
 	}
 	
 	public int hasData() {
