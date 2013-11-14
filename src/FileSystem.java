@@ -55,7 +55,7 @@ public class FileSystem implements Runnable{
 		
 	}
 	
-	private void splitUpFiles(int rep, String[] filesStr) throws IOException {
+	private void splitUpFiles(int rep, String[] filesStr) throws IOException, InterruptedException {
 		int node = 0;
 		for(int i=0; i < filesStr.length; i++) {
 			String file = filesStr[i];
