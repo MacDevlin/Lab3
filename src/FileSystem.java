@@ -21,7 +21,8 @@ public class FileSystem implements Runnable{
 	CommunicationServer cServer;
 	public Map<String,String> filesystem_config;
 	Map<String,Integer> fileLocations;
-	
+	Map<String,Integer> fileLines;
+	public String path = "/tmp/";
 	public FileSystem(String ip, int port, CommunicationServer cServer, boolean isMaster) {
 		files = new ArrayList<File>();
 		this.ip = ip;
@@ -30,6 +31,7 @@ public class FileSystem implements Runnable{
 		this.isMaster = isMaster;
 		filesystem_config = new HashMap<String,String>();
 		fileLocations = new HashMap<String,Integer>();
+		fileLines = new HashMap<String,Integer>();
 	}
 	
 	
@@ -40,6 +42,14 @@ public class FileSystem implements Runnable{
 	
 	public int getFileLocation(String filename) {
 		return fileLocations.get(filename);
+	}
+	
+	public int getFileLocation(String filename, int part) {
+		return fileLocations.get(filename + "_" + part);
+	}
+	
+	public int getFileLineNum(String filename) {
+		return fileLines.get(filename);
 	}
 	
 	private void sendFileIncMessage(DistFile f, int c) throws IOException, InterruptedException {
@@ -67,14 +77,15 @@ public class FileSystem implements Runnable{
 				lines.add(data.readLine());
 			}
 			int numLines = lines.size();
+			fileLines.put(file, numLines);
 			for(int r=0; r<rep-1; r++)
 			{
-				DistFile f = new DistFile(file,r,lines,numLines/rep*r,numLines/rep);
+				DistFile f = new DistFile(path,file,r,lines,numLines/rep*r,numLines/rep);
 				sendFileIncMessage(f,node%cServer.participants());
 				
 				node++;
 			}
-			DistFile f = new DistFile(file,rep-1,lines,numLines/rep*(rep-1),numLines/rep+numLines%rep);
+			DistFile f = new DistFile(path,file,rep-1,lines,numLines/rep*(rep-1),numLines/rep+numLines%rep);//account for a remainder
 			sendFileIncMessage(f,node%cServer.participants());
 			node++;
 		}

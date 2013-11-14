@@ -16,11 +16,12 @@ public class DistFile implements Serializable {
 	int part;
 	public int numBytes;
 	DataInputStream data;
-	
-	public DistFile(String filename, int part, List<String> lines, int startLine, int numLines) throws FileNotFoundException {
+	public String path;
+	public DistFile(String path, String filename, int part, List<String> lines, int startLine, int numLines) throws FileNotFoundException {
 		this.part = part;
-		this.filename = "/tmp/" + filename + "_" + part;
-		File f = new File(this.filename);
+		this.path = path;
+		this.filename = filename + "_" + part;
+		File f = new File(this.path + this.filename);
 		PrintStream fo = new PrintStream(f);
 		numBytes = 0;
 		for(int l = startLine; l<startLine+numLines; l++) {
@@ -38,7 +39,7 @@ public class DistFile implements Serializable {
 	
 	public void openFile() throws FileNotFoundException {
 		if(data == null) {
-			data = new DataInputStream(new FileInputStream(filename));
+			data = new DataInputStream(new FileInputStream(path+filename));
 		}
 	}
 	//asumes no changes to file size ever

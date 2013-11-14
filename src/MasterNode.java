@@ -90,7 +90,8 @@ public class MasterNode {
 		fSystemThread.start();
 
 		System.out.println("Loading Scheduler");
-		scheduler = new Scheduler(fSystem);
+		scheduler = new Scheduler(fSystem,cServer);
+		cServer.cHandler.scheduler = scheduler;//set scheduler in comm handler
 		
 		startShell();
 		

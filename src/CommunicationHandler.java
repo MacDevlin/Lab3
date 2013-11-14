@@ -1,13 +1,19 @@
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.PrintStream;
 
 
 public class CommunicationHandler implements Runnable {
 
 	public CommunicationServer cServer;
 	public volatile boolean running;
+	public Scheduler scheduler;
 	public CommunicationHandler(CommunicationServer cServer) {
 		this.cServer = cServer;
 		running=false;
@@ -21,10 +27,63 @@ public class CommunicationHandler implements Runnable {
 		c.networkOut.print("ACK\n");
 	}
 	
-	public void processRequest(String request, Connection con) throws IOException {
-		if(request.startsWith("MAP")) {
+	public void map(String filename, int start, int end, IFunction iFun) throws IOException {
+		File f = new File(filename);
+		File f2 = new File(filename+"_map");
+		DataInputStream fi = new DataInputStream(new FileInputStream(f));
+		PrintStream ps = new PrintStream(f2);
+		//TODO: stop at end
+		while(fi.available()>0) {
+			String line = fi.readLine();
+			iFun.execute(line);
+			ps.println(line);
+		}
+		fi.close();
+		ps.close();
+		
+	}
+	
+	public void processRequest(String request, Connection con) throws IOException, InterruptedException {
+		if(request.startsWith("MAP REQUEST")) {
 			System.out.println("MAP REQUEST");
+			String[] split = request.split(",");
+			String filename = split[1];
+			Integer startRec = Integer.parseInt(split[2]);
+			Integer endRec = Integer.parseInt(split[3]);
+			Integer size = Integer.parseInt(split[4]);
+			byte[] funcData = new byte[size];
+			con.networkIn.readFully(funcData);//read in the IFunction
 			
+			//test reconstitute
+			try {
+				IFunction iFun = reconstitute(funcData);
+			} catch (ClassNotFoundException e) {
+				System.out.println("Could not reconstitute function to map");
+			}
+			if(scheduler != null) {
+				scheduler.schedule(con,filename,startRec,endRec,funcData);
+			}
+			
+			
+		}
+		else if(request.startsWith("MAP ASSIGN")) {
+			
+			String[] split = request.split(",");
+			String filename = split[1];
+			Integer startRec = Integer.parseInt(split[2]);
+			Integer endRec = Integer.parseInt(split[3]);
+			Integer size = Integer.parseInt(split[4]);
+			System.out.println("MAP ASSIGN: " + filename + " (" + startRec + " - " + endRec + ")");
+			byte[] funcData = new byte[size];
+			con.networkIn.readFully(funcData);//read in the IFunction
+			IFunction iFun = null;
+			try {
+				iFun = reconstitute(funcData);
+			} catch (ClassNotFoundException e) {
+				System.out.println("Could not reconstitute function to map");
+			}
+			//apply the function...
+			map(filename,startRec,endRec,iFun);
 		}
 		else if(request.startsWith("REDUCE")) {
 			System.out.println("REDUCE REQUEST");
@@ -57,6 +116,21 @@ public class CommunicationHandler implements Runnable {
 		}
 	}
 	
+	private IFunction reconstitute(byte[] data) throws IOException, ClassNotFoundException {
+        File f = new File("reconstituting.ser");
+        if(f.exists()) {
+                f.delete();
+        }
+        FileOutputStream fout = new FileOutputStream("reconstituting.ser");
+        fout.write(data);
+        FileInputStream fin = new FileInputStream("reconstituting.ser");
+        
+        ObjectInputStream in = new ObjectInputStream(fin);
+        IFunction iFun = (IFunction)in.readObject();
+        return iFun;
+}
+	
+	
 	public void run() {
 		running = true;
 		
@@ -75,6 +149,9 @@ public class CommunicationHandler implements Runnable {
 					processRequest(line,con);
 				} catch (IOException e) {
 					//couldn't save file or other things
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
 			}
 			try {
