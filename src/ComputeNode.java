@@ -48,7 +48,7 @@ public class ComputeNode {
 			cServer.cHandler.addRunningProgram(ffMR);
 			//class file is split[1], arguments are the rest
 			
-			//TODO: why the hell is this required
+			
 			//split[1] = split[1].substring(0,split[1].length()-1);
 			
 			try {
@@ -87,7 +87,7 @@ public class ComputeNode {
 			try {
 				if(System.in.available()>0) {
 					char readByte = (char)System.in.read();
-					if(readByte != '\n') {
+					if(readByte != '\n' && readByte != '\r') {
 						request = request + readByte;
 					}
 					else {

@@ -22,7 +22,7 @@ public class MRTest1 implements Runnable {
 		try {
 			MR.map(filename, startRec, numRecs, triple);
 			int answer = Integer.parseInt(MR.reduce(filename, startRec,numRecs, sum));
-			System.out.println("Sum of the digits from " + startRec + " to " + (startRec + numRecs - 1) + ": " + answer);
+			System.out.println("Three times the sum of the digits from " + startRec + " to " + (startRec + numRecs - 1) + ": " + answer);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

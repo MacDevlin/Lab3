@@ -30,6 +30,7 @@ public class DistFile implements Serializable {
 		for(int l = startLine; l<startLine+numLines; l++) {
 			fo.println(lines.get(l));
 			numBytes += lines.get(l).getBytes().length + 1;//this might fail on windows.
+			//numBytes += 1;//make this work on windows
 		}
 		fo.close();
 		

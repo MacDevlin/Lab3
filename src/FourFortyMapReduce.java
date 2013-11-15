@@ -11,6 +11,7 @@ public class FourFortyMapReduce {
 	public int id;
 	public boolean reduceComplete = false;
 	public String reduceResult = "";
+	public boolean mapComplete = false;
 	public FourFortyMapReduce(int id, CommunicationServer cServer) {
 		this.cServer = cServer;
 		this.id = id;
@@ -25,7 +26,11 @@ public class FourFortyMapReduce {
 		System.arraycopy(fData, 0, message, messageStr.length, fData.length);
 		
 		cServer.sendMessage(0, message);//0 is always master on a slave
-		
+		while(mapComplete==false) {
+			Thread.currentThread().sleep(25);
+		}
+		mapComplete=false;
+		return;
 	}
 	
 	
@@ -53,12 +58,12 @@ public class FourFortyMapReduce {
                 f.delete();
         }
         //serialize it
-        System.out.println("Serializing function");
+        //System.out.println("Serializing function");
         FileOutputStream fout = new FileOutputStream("serializing.ser");
         out = new ObjectOutputStream(fout);
-        System.out.println(String.format("writing %s", ifun.toString()));
+        //System.out.println(String.format("writing %s", ifun.toString()));
         out.writeObject(ifun);
-        System.out.println("Reading Object file into byte array");
+        //System.out.println("Reading Object file into byte array");
         FileInputStream fin = new FileInputStream("serializing.ser");
         byte[] data = new byte[fin.available()];
         fin.read(data);

@@ -7,7 +7,9 @@ public class MapRequest {
 	public int recNum;
 	public byte[] funcData;
 	public boolean isMap;
-	public MapRequest(boolean isMap, Connection requester, int id, String filename, int start, int num, byte[] funcData) {
+	public int completeParts;
+	public int totalParts;
+	public MapRequest(boolean isMap, Connection requester, int id, String filename, int start, int num, int totalParts, byte[] funcData) {
 		this.isMap = isMap;
 		this.requester = requester;
 		this.id = id;
@@ -15,5 +17,7 @@ public class MapRequest {
 		this.startRec = start;
 		this.recNum = num;
 		this.funcData = funcData;
+		this.totalParts = totalParts;
+		this.completeParts = 0;
 	}
 }

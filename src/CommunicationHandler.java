@@ -37,7 +37,7 @@ public class CommunicationHandler implements Runnable {
 		c.networkOut.print("ACK\n");
 	}
 	
-	public void map(String filename, int start, int recNum, Map iFun) throws IOException {
+	public void map(String filename, int start, int recNum, Map iFun) throws IOException, InterruptedException {
 		File f = new File(filename);
 		File f2 = new File(filename+"_map");
 		DataInputStream fi = new DataInputStream(new FileInputStream(f));
@@ -54,34 +54,9 @@ public class CommunicationHandler implements Runnable {
 		}
 		fi.close();
 		ps.close();
-		System.out.println("Map Complete");
-		
-	}
-	
-	public void reduce(String filename, int start, int recNum, Reduce iFun) throws IOException, InterruptedException {
-		File f = new File(filename+"_map");
-		File f2 = new File(filename+"_reduce");
-		DataInputStream fi = new DataInputStream(new FileInputStream(f));
-		PrintStream ps = new PrintStream(f2);
-		//skip to the start
-		for(int i=0; i<start; i++) {
-			fi.readLine();
-		}
-		String answer = fi.readLine();
-		for(int i=0; i<recNum; i++) {
-			String line = fi.readLine();
-			answer = iFun.execute(answer, line);
-		}
-		ps.println(answer);
-		fi.close();
-		ps.close();
-		byte[] messageStr = ("REDUCE RESULT," + filename + "," + "\n"+answer+"\n").getBytes();
-		//byte[] message = new byte[messageStr.length + answer.getBytes().length];
-		//System.arraycopy(messageStr, 0, message, 0, messageStr.length);
-		//System.arraycopy(answer.getBytes(), 0, message, messageStr.length, answer.getBytes().length);
+		byte[] messageStr = ("MAP RESULT," + filename + "\n").getBytes();
 		cServer.sendMessage(0, messageStr);
-		
-		System.out.println("Reduce Complete");
+		System.out.println("Map Complete");
 		
 	}
 	
@@ -96,12 +71,6 @@ public class CommunicationHandler implements Runnable {
 			Integer size = Integer.parseInt(split[5]);
 			byte[] funcData = new byte[size];
 			con.networkIn.readFully(funcData);//read in the IFunction
-			//test reconstitute
-			/*try {
-				IFunction iFun = reconstitute(funcData);
-			} catch (ClassNotFoundException e) {
-				System.out.println("Could not reconstitute function to map");
-			}*/
 			if(scheduler != null) {
 				scheduler.schedule(true, con, id, filename,startRec,recNum,funcData);
 			}
@@ -125,7 +94,10 @@ public class CommunicationHandler implements Runnable {
 			//ack the assignment
 			ack(con);
 			//apply the function...
-			map(filename,startRec,recNum,iFun);
+			Mapper m = new Mapper(cServer, filename,startRec,recNum,iFun);
+			Thread t = new Thread(m);
+			t.start();
+			//map(filename,startRec,recNum,iFun);
 			return;
 		}
 		else if(request.startsWith("REDUCE REQUEST")) {
@@ -173,7 +145,15 @@ public class CommunicationHandler implements Runnable {
 			String[] split = request.split(",");
 			String filename = split[1];
 			String result = con.networkIn.readLine();
-			scheduler.logResult(con,filename,result);
+			scheduler.logResult(false, con,filename,result);
+		}
+		else if(request.startsWith("MAP RESULT")) {
+			System.out.println("MAP RESULT");
+			String[] split = request.split(",");
+			String filename = split[1];
+			ack(con);
+			scheduler.logResult(true, con,filename,"");
+			return;
 		}
 		else if(request.startsWith("REDUCE COMPLETE")) {
 			System.out.println("REDUCE COMPLETE");
@@ -184,6 +164,12 @@ public class CommunicationHandler implements Runnable {
 			//NEED TO RETURN THIS TO THE CALLER
 			runningPrograms.get(id).reduceComplete=true;
 			runningPrograms.get(id).reduceResult=result;
+		}
+		else if(request.startsWith("MAP COMPLETE")) {
+			System.out.println("MAP COMPLETE");
+			String[] split = request.split(",");
+			Integer id = Integer.parseInt(split[1]);
+			runningPrograms.get(id).mapComplete=true;
 		}
 		
 		else if(request.startsWith("FILESYSTEM")) {

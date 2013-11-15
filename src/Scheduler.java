@@ -13,23 +13,34 @@ public class Scheduler implements Runnable {
 	public FileSystem fSystem;
 	public CommunicationServer cServer;
 	public Map<String,ReduceRequest> activeReduces;
+	public Map<String,MapRequest> activeMaps;
 	public Scheduler(FileSystem fSystem, CommunicationServer cServer) {
 		this.fSystem = fSystem;
 		this.cServer = cServer;
 		requests = new LinkedList<MapRequest>();
 		activeReduces = new HashMap<String,ReduceRequest>();
+		activeMaps = new HashMap<String,MapRequest>();
+		
 	}
 	
-	public synchronized void logResult(Connection con, String filename, String result) {
+	public synchronized void logResult(boolean isMap, Connection con, String filename, String result) {
 		int part = Integer.parseInt(filename.substring(filename.lastIndexOf("_") + 1));
 		String baseName = filename.substring(0,filename.lastIndexOf("_")).substring(filename.lastIndexOf("/")+1);
-		ReduceRequest rr = activeReduces.get(baseName);
-		rr.results[part] = result;
-		rr.resultNum++;
+		if(!isMap) {
+			ReduceRequest rr = activeReduces.get(baseName);
+			rr.results[part-rr.startPart] = result;
+			rr.resultNum++;
+		} else {
+			MapRequest mr = activeMaps.get(baseName);
+			mr.completeParts++;
+		}
 	}
 	
 	public void schedule(boolean isMap, Connection con, int id, String filename, int startRecord, int recNum, byte[] funcData) throws IOException, InterruptedException {
-		MapRequest mr = new MapRequest(isMap, con, id, filename,startRecord,recNum,funcData);
+		MapRequest mr = new MapRequest(isMap, con, id, filename,startRecord,recNum,-1,funcData);
+		if(isMap) {
+			activeMaps.put(filename, mr);
+		}
 		requests.add(mr);
 	}
 	
@@ -41,11 +52,16 @@ public class Scheduler implements Runnable {
 		
 		int fileLines = fSystem.getFileLineNum(mr.filename);
 		int startPart = ((mr.startRec)*rep+1)/fileLines;
-		int endPart = (mr.startRec+mr.recNum)*(rep-1)/fileLines+1;
+		//endPart is the last part of the file that needs to be mapped/reduced
+		int linesPerPart = fileLines/rep;
+		int endPart = (mr.startRec+mr.recNum-1)/linesPerPart;
+		
+		
 		if(!mr.isMap) {
-			ReduceRequest rr = new ReduceRequest(cServer.getNumber(mr.requester), mr.id, endPart - startPart, cServer.cHandler.reconstituteReduce(mr.funcData));
+			ReduceRequest rr = new ReduceRequest(cServer.getNumber(mr.requester), mr.id, endPart - startPart+1, startPart, cServer.cHandler.reconstituteReduce(mr.funcData));
 			activeReduces.put(mr.filename, rr);
-			System.out.println(activeReduces.size());
+		} else {
+			mr.totalParts = endPart - startPart + 1;
 		}
 		
 		//int endPart = (int)Math.ceil((float)(mr.startRec+mr.recNum-1)*rep/fileLines);
@@ -58,13 +74,17 @@ public class Scheduler implements Runnable {
 			System.out.println("Assigning part " + i + " to " + c);
 			int partStart = i*partLen;
 			int relStart = Math.max(mr.startRec - partStart, 0);
+			
 			int relLen = (mr.startRec+mr.recNum - partStart-1);
 			if(relLen < 0) continue;
 			if(i != rep-1) {
 				//not in last part
-				if(relLen > partLen-1) {
-					relLen = partLen-1;
+				if(relLen+relStart > partLen-1) {
+					relLen = partLen-1-relStart;
 				}
+			}
+			if(!mr.isMap) {
+				relStart = 0; //accounted for by the map not including those lines
 			}
 			byte[] messageStr = null;
 			if(mr.isMap){ 
@@ -101,6 +121,20 @@ public class Scheduler implements Runnable {
 				activeReduces.remove(filename);
 			}
 		}
+		Iterator<Entry<String,MapRequest>> it2 = activeMaps.entrySet().iterator();
+		while(it2.hasNext()) {
+			Entry<String, MapRequest> e = it2.next();
+			MapRequest mr = e.getValue();
+			String filename = e.getKey();
+			if(mr.completeParts == mr.totalParts) {
+				
+				//send message
+				byte[] messageStr = ("MAP COMPLETE," + mr.id + "\n").getBytes();
+				cServer.sendMessage(cServer.getNumber(mr.requester), messageStr);
+				activeMaps.remove(filename);
+			}
+		}
+		
 	}
 	
 	public void run() {
