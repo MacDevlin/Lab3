@@ -22,6 +22,7 @@ public class FileSystem implements Runnable{
 	public Map<String,String> filesystem_config;
 	Map<String,Integer> fileLocations;
 	Map<String,Integer> fileLines;
+	public int repFactor;
 	public String path = "/tmp/";
 	public FileSystem(String ip, int port, CommunicationServer cServer, boolean isMaster) {
 		files = new ArrayList<File>();
@@ -32,6 +33,7 @@ public class FileSystem implements Runnable{
 		filesystem_config = new HashMap<String,String>();
 		fileLocations = new HashMap<String,Integer>();
 		fileLines = new HashMap<String,Integer>();
+		repFactor = -1;
 	}
 	
 	
@@ -81,12 +83,12 @@ public class FileSystem implements Runnable{
 			for(int r=0; r<rep-1; r++)
 			{
 
-				DistFile f = new DistFile(path,file,r,lines,numLines/rep*r,numLines/rep);
+				DistFile f = new DistFile(path,file,r,lines,numLines*r/(rep),numLines/rep);
 				sendFileIncMessage(f,node%cServer.participants());
 
 				node++;
 			}
-			DistFile f = new DistFile(path,file,rep-1,lines,numLines/rep*(rep-1),numLines/rep+numLines%rep);//account for a remainder
+			DistFile f = new DistFile(path,file,rep-1,lines,numLines*(rep-1)/rep,numLines/rep+numLines%rep);//account for a remainder
 			sendFileIncMessage(f,node%cServer.participants());
 			node++;
 		}
@@ -115,6 +117,7 @@ public class FileSystem implements Runnable{
 			System.out.println("Could not read filesystem_config.conf, exiting");
 			System.exit(1);
 		}
+		repFactor = Integer.parseInt(filesystem_config.get("replication_factor"));
 	}
 	
 	public void printLocations() {

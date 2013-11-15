@@ -27,7 +27,7 @@ public class CommunicationHandler implements Runnable {
 		c.networkOut.print("ACK\n");
 	}
 	
-	public void map(String filename, int start, int recNum, IFunction iFun) throws IOException {
+	public void map(String filename, int start, int recNum, Map iFun) throws IOException {
 		File f = new File(filename);
 		File f2 = new File(filename+"_map");
 		DataInputStream fi = new DataInputStream(new FileInputStream(f));
@@ -48,6 +48,33 @@ public class CommunicationHandler implements Runnable {
 		
 	}
 	
+	public void reduce(String filename, int start, int recNum, Reduce iFun) throws IOException, InterruptedException {
+		File f = new File(filename+"_map");
+		File f2 = new File(filename+"_reduce");
+		DataInputStream fi = new DataInputStream(new FileInputStream(f));
+		PrintStream ps = new PrintStream(f2);
+		//skip to the start
+		for(int i=0; i<start; i++) {
+			fi.readLine();
+		}
+		String answer = fi.readLine();
+		for(int i=0; i<recNum; i++) {
+			String line = fi.readLine();
+			answer = iFun.execute(answer, line);
+		}
+		ps.println(answer);
+		fi.close();
+		ps.close();
+		byte[] messageStr = ("REDUCE RESULT," + filename + "," + "\n"+answer+"\n").getBytes();
+		//byte[] message = new byte[messageStr.length + answer.getBytes().length];
+		//System.arraycopy(messageStr, 0, message, 0, messageStr.length);
+		//System.arraycopy(answer.getBytes(), 0, message, messageStr.length, answer.getBytes().length);
+		cServer.sendMessage(0, messageStr);
+		
+		System.out.println("Reduce Complete");
+		
+	}
+	
 	public void processRequest(String request, Connection con) throws IOException, InterruptedException {
 		if(request.startsWith("MAP REQUEST")) {
 			System.out.println("MAP REQUEST");
@@ -59,13 +86,13 @@ public class CommunicationHandler implements Runnable {
 			byte[] funcData = new byte[size];
 			con.networkIn.readFully(funcData);//read in the IFunction
 			//test reconstitute
-			try {
+			/*try {
 				IFunction iFun = reconstitute(funcData);
 			} catch (ClassNotFoundException e) {
 				System.out.println("Could not reconstitute function to map");
-			}
+			}*/
 			if(scheduler != null) {
-				scheduler.schedule(con,filename,startRec,recNum,funcData);
+				scheduler.schedule(true, con,filename,startRec,recNum,funcData);
 			}
 		}
 		else if(request.startsWith("MAP ASSIGN")) {
@@ -78,9 +105,9 @@ public class CommunicationHandler implements Runnable {
 			System.out.println("MAP ASSIGN: " + filename + " (" + startRec + " - " + recNum + ")");
 			byte[] funcData = new byte[size];
 			con.networkIn.readFully(funcData);//read in the IFunction
-			IFunction iFun = null;
+			Map iFun = null;
 			try {
-				iFun = reconstitute(funcData);
+				iFun = reconstituteMap(funcData);
 			} catch (ClassNotFoundException e) {
 				System.out.println("Could not reconstitute function to map");
 			}
@@ -90,9 +117,60 @@ public class CommunicationHandler implements Runnable {
 			map(filename,startRec,recNum,iFun);
 			return;
 		}
-		else if(request.startsWith("REDUCE")) {
+		else if(request.startsWith("REDUCE REQUEST")) {
 			System.out.println("REDUCE REQUEST");
+			String[] split = request.split(",");
+			String filename = split[1];
+			Integer startRec = Integer.parseInt(split[2]);
+			Integer recNum = Integer.parseInt(split[3]);
+			Integer size = Integer.parseInt(split[4]);
+			byte[] funcData = new byte[size];
+			con.networkIn.readFully(funcData);//read in the IFunction
+			if(scheduler != null) {
+				scheduler.schedule(false, con,filename,startRec,recNum,funcData);
+			}
+			
 		}
+		else if(request.startsWith("REDUCE ASSIGN")) {
+			
+			String[] split = request.split(",");
+			String filename = split[1];
+			Integer startRec = Integer.parseInt(split[2]);
+			Integer recNum = Integer.parseInt(split[3]);
+			Integer size = Integer.parseInt(split[4]);
+			System.out.println("REDUCE ASSIGN: " + filename + " (" + startRec + " - " + recNum + ")");
+			byte[] funcData = new byte[size];
+			con.networkIn.readFully(funcData);//read in the IFunction
+			Reduce iFun = null;
+			try {
+				iFun = reconstituteReduce(funcData);
+			} catch (ClassNotFoundException e) {
+				System.out.println("Could not reconstitute function to map");
+			}
+			//ack the assignment
+			ack(con);
+			//apply the function...
+			Reducer red = new Reducer(cServer, filename, startRec, recNum, iFun);
+			Thread t = new Thread(red);
+			t.start();
+			//reduce(filename,startRec,recNum,iFun);
+			return;
+		}
+		else if(request.startsWith("REDUCE RESULT")) {
+			System.out.println("REDUCE RESULT");
+			String[] split = request.split(",");
+			String filename = split[1];
+			String result = con.networkIn.readLine();
+			scheduler.logResult(con,filename,result);
+		}
+		else if(request.startsWith("REDUCE COMPLETE")) {
+			System.out.println("REDUCE COMPLETE");
+			String[] split = request.split(",");
+			String result = split[1];
+			System.out.println(result);
+			//NEED TO RETURN THIS TO THE CALLER
+		}
+		
 		else if(request.startsWith("FILESYSTEM")) {
 			if(request.startsWith("FILESYSTEM FILE_INC")) {
 				
@@ -121,7 +199,7 @@ public class CommunicationHandler implements Runnable {
 		}
 	}
 	
-	private IFunction reconstitute(byte[] data) throws IOException, ClassNotFoundException {
+	private Map reconstituteMap(byte[] data) throws IOException, ClassNotFoundException {
         File f = new File("reconstituting.ser");
         if(f.exists()) {
                 f.delete();
@@ -131,9 +209,23 @@ public class CommunicationHandler implements Runnable {
         FileInputStream fin = new FileInputStream("reconstituting.ser");
         
         ObjectInputStream in = new ObjectInputStream(fin);
-        IFunction iFun = (IFunction)in.readObject();
+        Map iFun = (Map)in.readObject();
         return iFun;
-}
+	}
+	
+	public Reduce reconstituteReduce(byte[] data) throws IOException, ClassNotFoundException {
+        File f = new File("reconstituting.ser");
+        if(f.exists()) {
+                f.delete();
+        }
+        FileOutputStream fout = new FileOutputStream("reconstituting.ser");
+        fout.write(data);
+        FileInputStream fin = new FileInputStream("reconstituting.ser");
+        
+        ObjectInputStream in = new ObjectInputStream(fin);
+        Reduce iFun = (Reduce)in.readObject();
+        return iFun;
+	}
 	
 	
 	public void run() {

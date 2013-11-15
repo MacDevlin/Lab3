@@ -12,7 +12,7 @@ public class FourFortyMapReduce {
 		this.cServer = cServer;
 	}
 	
-	public void map(String filename, int recordStart, int recordNum, IFunction function) throws IOException, InterruptedException {
+	public void map(String filename, int recordStart, int recordNum, Map function) throws IOException, InterruptedException {
 		//talk to master
 		byte[] fData = serialize(function);
 		byte[] messageStr = ("MAP REQUEST," + filename + "," + recordStart + "," + recordNum + "," + fData.length + "\n").getBytes();
@@ -25,7 +25,17 @@ public class FourFortyMapReduce {
 	}
 	
 	
-	public byte[] serialize(IFunction ifun) throws IOException {
+	public void reduce(String filename, int recordStart, int recordNum, Reduce function) throws IOException, InterruptedException {
+		byte[] fData = serialize(function);
+		byte[] messageStr = ("REDUCE REQUEST," + filename + "," + recordStart + "," + recordNum + "," + fData.length + "\n").getBytes();
+		byte[] message = new byte[messageStr.length + fData.length];
+		System.arraycopy(messageStr, 0, message, 0, messageStr.length);
+		System.arraycopy(fData, 0, message, messageStr.length, fData.length);
+		
+		cServer.sendMessage(0, message);//0 is always master on a slave
+	}
+	
+	public byte[] serialize(Object ifun) throws IOException {
         ObjectOutputStream out;
         File f = new File("serializing.ser");
         if(f.exists()) {

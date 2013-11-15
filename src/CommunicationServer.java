@@ -25,12 +25,21 @@ public class CommunicationServer implements Runnable {
 		cHandlerThread.start();
 	}
 	
+	public int getNumber(Connection c) {
+		for(int i=0; i<connections.size(); i++) {
+			if(connections.get(i).remoteIp.equals(c.remoteIp) && connections.get(i).remotePort == c.remotePort) {
+				return i;
+			}
+		}
+		return -1;
+	}
+	
 	public int participants() {
 		return connections.size();
 	}
 	
 	//message assumed to end in newline
-	public void sendMessage(int c, byte[] message) throws IOException, InterruptedException {
+	public synchronized void sendMessage(int c, byte[] message) throws IOException, InterruptedException {
 		Connection con = connections.get(c);
 		con.networkOut.write(message);
 		

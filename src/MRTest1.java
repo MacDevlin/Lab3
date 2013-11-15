@@ -18,10 +18,12 @@ public class MRTest1 implements Runnable {
 		System.out.println("Running MRTest1");
 		
 		//map triple across a.txt 0 -> 5
-		IFunction triple = (IFunction)new Triple();
-		
+		Map triple = (Map)new Triple();
+		Reduce sum = (Reduce)new Sum();
 		try {
 			MR.map(filename, startRec, numRecs,triple);
+			MR.reduce(filename, startRec, numRecs,sum);
+			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
