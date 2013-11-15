@@ -12,10 +12,10 @@ public class FourFortyMapReduce {
 		this.cServer = cServer;
 	}
 	
-	public void map(String filename, int recordStart, int recordEnd, IFunction function) throws IOException, InterruptedException {
+	public void map(String filename, int recordStart, int recordNum, IFunction function) throws IOException, InterruptedException {
 		//talk to master
 		byte[] fData = serialize(function);
-		byte[] messageStr = ("MAP REQUEST," + filename + "," + recordStart + "," + recordEnd + "," + fData.length + "\n").getBytes();
+		byte[] messageStr = ("MAP REQUEST," + filename + "," + recordStart + "," + recordNum + "," + fData.length + "\n").getBytes();
 		byte[] message = new byte[messageStr.length + fData.length];
 		System.arraycopy(messageStr, 0, message, 0, messageStr.length);
 		System.arraycopy(fData, 0, message, messageStr.length, fData.length);

@@ -27,19 +27,24 @@ public class CommunicationHandler implements Runnable {
 		c.networkOut.print("ACK\n");
 	}
 	
-	public void map(String filename, int start, int end, IFunction iFun) throws IOException {
+	public void map(String filename, int start, int recNum, IFunction iFun) throws IOException {
 		File f = new File(filename);
 		File f2 = new File(filename+"_map");
 		DataInputStream fi = new DataInputStream(new FileInputStream(f));
 		PrintStream ps = new PrintStream(f2);
 		//TODO: stop at end
+		int lineNum = 0;
 		while(fi.available()>0) {
 			String line = fi.readLine();
-			iFun.execute(line);
-			ps.println(line);
+			if(lineNum >= start && lineNum <=start+recNum) {
+				String newLine = iFun.execute(line);
+				ps.println(newLine);
+			}
+			lineNum++;
 		}
 		fi.close();
 		ps.close();
+		System.out.println("Map Complete");
 		
 	}
 	
@@ -49,11 +54,10 @@ public class CommunicationHandler implements Runnable {
 			String[] split = request.split(",");
 			String filename = split[1];
 			Integer startRec = Integer.parseInt(split[2]);
-			Integer endRec = Integer.parseInt(split[3]);
+			Integer recNum = Integer.parseInt(split[3]);
 			Integer size = Integer.parseInt(split[4]);
 			byte[] funcData = new byte[size];
 			con.networkIn.readFully(funcData);//read in the IFunction
-			
 			//test reconstitute
 			try {
 				IFunction iFun = reconstitute(funcData);
@@ -61,19 +65,17 @@ public class CommunicationHandler implements Runnable {
 				System.out.println("Could not reconstitute function to map");
 			}
 			if(scheduler != null) {
-				scheduler.schedule(con,filename,startRec,endRec,funcData);
+				scheduler.schedule(con,filename,startRec,recNum,funcData);
 			}
-			
-			
 		}
 		else if(request.startsWith("MAP ASSIGN")) {
 			
 			String[] split = request.split(",");
 			String filename = split[1];
 			Integer startRec = Integer.parseInt(split[2]);
-			Integer endRec = Integer.parseInt(split[3]);
+			Integer recNum = Integer.parseInt(split[3]);
 			Integer size = Integer.parseInt(split[4]);
-			System.out.println("MAP ASSIGN: " + filename + " (" + startRec + " - " + endRec + ")");
+			System.out.println("MAP ASSIGN: " + filename + " (" + startRec + " - " + recNum + ")");
 			byte[] funcData = new byte[size];
 			con.networkIn.readFully(funcData);//read in the IFunction
 			IFunction iFun = null;
@@ -82,8 +84,11 @@ public class CommunicationHandler implements Runnable {
 			} catch (ClassNotFoundException e) {
 				System.out.println("Could not reconstitute function to map");
 			}
+			//ack the assignment
+			ack(con);
 			//apply the function...
-			map(filename,startRec,endRec,iFun);
+			map(filename,startRec,recNum,iFun);
+			return;
 		}
 		else if(request.startsWith("REDUCE")) {
 			System.out.println("REDUCE REQUEST");
@@ -101,7 +106,7 @@ public class CommunicationHandler implements Runnable {
 					con.networkIn.readFully(data);
 				} catch (IOException e) {
 				}
-				File f = new File(filename);
+				File f = new File("/tmp/" + filename);
 				FileOutputStream ps = new FileOutputStream(f);
 				ps.write(data);
 				ps.close();

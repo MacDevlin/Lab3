@@ -18,11 +18,14 @@ public class DistFile implements Serializable {
 	DataInputStream data;
 	public String path;
 	public DistFile(String path, String filename, int part, List<String> lines, int startLine, int numLines) throws FileNotFoundException {
+
 		this.part = part;
 		this.path = path;
 		this.filename = filename + "_" + part;
+
 		File f = new File(this.path + this.filename);
-		PrintStream fo = new PrintStream(f);
+		PrintStream fo = new PrintStream(this.path + this.filename);
+
 		numBytes = 0;
 		for(int l = startLine; l<startLine+numLines; l++) {
 			fo.println(lines.get(l));

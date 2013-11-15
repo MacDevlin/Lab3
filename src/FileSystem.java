@@ -56,7 +56,7 @@ public class FileSystem implements Runnable{
 		byte[] messageStr = ("FILESYSTEM FILE_INC " + f.filename + "," + f.getSize() + "\n").getBytes();
 		int size = messageStr.length;
 		byte[] message = new byte[size + f.getSize()];
-		System.out.println("Sending FILE INC message" + f.getSize());
+		//System.out.println("Sending FILE INC message" + f.getSize());
 		System.arraycopy(messageStr, 0, message, 0, messageStr.length);
 		byte[] fileData = f.getBytes();
 		System.arraycopy(fileData, 0, message, messageStr.length, fileData.length);
@@ -80,9 +80,10 @@ public class FileSystem implements Runnable{
 			fileLines.put(file, numLines);
 			for(int r=0; r<rep-1; r++)
 			{
+
 				DistFile f = new DistFile(path,file,r,lines,numLines/rep*r,numLines/rep);
 				sendFileIncMessage(f,node%cServer.participants());
-				
+
 				node++;
 			}
 			DistFile f = new DistFile(path,file,rep-1,lines,numLines/rep*(rep-1),numLines/rep+numLines%rep);//account for a remainder

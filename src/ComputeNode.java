@@ -47,7 +47,7 @@ public class ComputeNode {
 			//class file is split[1], arguments are the rest
 			
 			//TODO: why the hell is this required
-			split[1] = split[1].substring(0,split[1].length()-1);
+			//split[1] = split[1].substring(0,split[1].length()-1);
 			
 			try {
 				Class<?> c = Class.forName(split[1]);
