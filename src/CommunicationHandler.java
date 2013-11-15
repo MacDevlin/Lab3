@@ -7,6 +7,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.PrintStream;
+import java.util.LinkedList;
+import java.util.List;
 
 
 public class CommunicationHandler implements Runnable {
@@ -14,9 +16,17 @@ public class CommunicationHandler implements Runnable {
 	public CommunicationServer cServer;
 	public volatile boolean running;
 	public Scheduler scheduler;
+
+	public List<FourFortyMapReduce> runningPrograms;
+	
 	public CommunicationHandler(CommunicationServer cServer) {
 		this.cServer = cServer;
 		running=false;
+		runningPrograms = new LinkedList<FourFortyMapReduce>();
+	}
+	
+	public void addRunningProgram(FourFortyMapReduce mr) {
+		runningPrograms.add(mr);
 	}
 	
 	public void sendMessage(Connection c, byte[] message) throws IOException {
@@ -79,10 +89,11 @@ public class CommunicationHandler implements Runnable {
 		if(request.startsWith("MAP REQUEST")) {
 			System.out.println("MAP REQUEST");
 			String[] split = request.split(",");
-			String filename = split[1];
-			Integer startRec = Integer.parseInt(split[2]);
-			Integer recNum = Integer.parseInt(split[3]);
-			Integer size = Integer.parseInt(split[4]);
+			int id = Integer.parseInt(split[1]);
+			String filename = split[2];
+			Integer startRec = Integer.parseInt(split[3]);
+			Integer recNum = Integer.parseInt(split[4]);
+			Integer size = Integer.parseInt(split[5]);
 			byte[] funcData = new byte[size];
 			con.networkIn.readFully(funcData);//read in the IFunction
 			//test reconstitute
@@ -92,7 +103,7 @@ public class CommunicationHandler implements Runnable {
 				System.out.println("Could not reconstitute function to map");
 			}*/
 			if(scheduler != null) {
-				scheduler.schedule(true, con,filename,startRec,recNum,funcData);
+				scheduler.schedule(true, con, id, filename,startRec,recNum,funcData);
 			}
 		}
 		else if(request.startsWith("MAP ASSIGN")) {
@@ -120,14 +131,15 @@ public class CommunicationHandler implements Runnable {
 		else if(request.startsWith("REDUCE REQUEST")) {
 			System.out.println("REDUCE REQUEST");
 			String[] split = request.split(",");
-			String filename = split[1];
-			Integer startRec = Integer.parseInt(split[2]);
-			Integer recNum = Integer.parseInt(split[3]);
-			Integer size = Integer.parseInt(split[4]);
+			Integer id = Integer.parseInt(split[1]);
+			String filename = split[2];
+			Integer startRec = Integer.parseInt(split[3]);
+			Integer recNum = Integer.parseInt(split[4]);
+			Integer size = Integer.parseInt(split[5]);
 			byte[] funcData = new byte[size];
 			con.networkIn.readFully(funcData);//read in the IFunction
 			if(scheduler != null) {
-				scheduler.schedule(false, con,filename,startRec,recNum,funcData);
+				scheduler.schedule(false, con,id,filename,startRec,recNum,funcData);
 			}
 			
 		}
@@ -166,9 +178,12 @@ public class CommunicationHandler implements Runnable {
 		else if(request.startsWith("REDUCE COMPLETE")) {
 			System.out.println("REDUCE COMPLETE");
 			String[] split = request.split(",");
-			String result = split[1];
-			System.out.println(result);
+			Integer id = Integer.parseInt(split[1]);
+			String result = split[2];
+			System.out.println(id + ": " + result);
 			//NEED TO RETURN THIS TO THE CALLER
+			runningPrograms.get(id).reduceComplete=true;
+			runningPrograms.get(id).reduceResult=result;
 		}
 		
 		else if(request.startsWith("FILESYSTEM")) {

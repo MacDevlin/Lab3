@@ -7,6 +7,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.UnknownHostException;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 
@@ -16,7 +18,6 @@ public class ComputeNode {
 	public static CommunicationServer cServer;
 	public static Thread cServerThread;
 	public static Connection master;
-	
 	public static void loadComputeNodeConfig() {
 		File f = new File("./node_config.conf");
 		try {
@@ -43,7 +44,8 @@ public class ComputeNode {
 			String[] split = request.split(" ");
 			String[] args = new String[split.length - 2];
 			System.arraycopy(split, 2, args, 0, args.length);
-			FourFortyMapReduce ffMR = new FourFortyMapReduce(cServer);
+			FourFortyMapReduce ffMR = new FourFortyMapReduce(cServer.cHandler.runningPrograms.size(), cServer);
+			cServer.cHandler.addRunningProgram(ffMR);
 			//class file is split[1], arguments are the rest
 			
 			//TODO: why the hell is this required

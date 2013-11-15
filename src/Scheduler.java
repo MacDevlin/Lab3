@@ -28,8 +28,8 @@ public class Scheduler implements Runnable {
 		rr.resultNum++;
 	}
 	
-	public void schedule(boolean isMap, Connection con, String filename, int startRecord, int recNum, byte[] funcData) throws IOException, InterruptedException {
-		MapRequest mr = new MapRequest(isMap, con,filename,startRecord,recNum,funcData);
+	public void schedule(boolean isMap, Connection con, int id, String filename, int startRecord, int recNum, byte[] funcData) throws IOException, InterruptedException {
+		MapRequest mr = new MapRequest(isMap, con, id, filename,startRecord,recNum,funcData);
 		requests.add(mr);
 	}
 	
@@ -43,7 +43,7 @@ public class Scheduler implements Runnable {
 		int startPart = ((mr.startRec)*rep+1)/fileLines;
 		int endPart = (mr.startRec+mr.recNum)*(rep-1)/fileLines+1;
 		if(!mr.isMap) {
-			ReduceRequest rr = new ReduceRequest(cServer.getNumber(mr.requester), endPart - startPart, cServer.cHandler.reconstituteReduce(mr.funcData));
+			ReduceRequest rr = new ReduceRequest(cServer.getNumber(mr.requester), mr.id, endPart - startPart, cServer.cHandler.reconstituteReduce(mr.funcData));
 			activeReduces.put(mr.filename, rr);
 			System.out.println(activeReduces.size());
 		}
@@ -96,7 +96,7 @@ public class Scheduler implements Runnable {
 				}
 				
 				//send message
-				byte[] messageStr = ("REDUCE COMPLETE," + answer + "\n").getBytes();
+				byte[] messageStr = ("REDUCE COMPLETE," + rr.id + "," + answer + "\n").getBytes();
 				cServer.sendMessage(rr.caller, messageStr);
 				activeReduces.remove(filename);
 			}
